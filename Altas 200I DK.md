@@ -37,7 +37,7 @@
 
 正常情况下能看到图形化界面：
 
-注意：用户名为“HwHiAiUser”，密码为“Mind@123”
+**注意**：用户名为“HwHiAiUser”，密码为“Mind@123”
 
 <img src=".\images\4.png" alt="1" style="zoom:67%;" />
 
@@ -73,9 +73,100 @@
 
 <img src=".\images\6.png" alt="1" style="zoom:67%;" />
 
-### 3. 转换模型
+### 3. 部署模型
 
+主要参考[Ascend/ModelZoo-PyTorch - Gitee.com](https://gitee.com/ascend/ModelZoo-PyTorch/tree/master/ACL_PyTorch/built-in/nlp/BiLSTM_CRF_PyTorch#快速上手)的“快速上手”章节，也有一些与文档中不同的操作，在下面一一列出。
 
+#### a.获取源码
+
+修改`requirements.txt` 中的torch版本：`torch==2.0.1`（修改前为1.13.0）
+
+#### b.准备数据集
+
+**问题1**. 文档中以下列命令下载数据集，但链接好像挂了（HTTP Error 403）
+
+```bash
+cd CLUENER2020/bilstm_crf_pytorch/
+python download_clue_data.py --data_dir=./dataset --tasks=cluener 
+cd ../../
+```
+
+可以从[yunwuyue7/Ascend](https://github.com/yunwuyue7/Ascend#)仓库中获取`archive.zip`压缩包，解压后得到所需的文件，放在`BiLSTM_CRF_PyTorch/CLUENER2020/bilstm_crf_pytorch/dataset/cluener`路径下。
+
+生成的数据目录结构与文档中一致：
+
+```bash
+├── CLUENER2020/
+    ├── bilstm_crf_pytorch/
+        ├── dataset/
+            ├── cluener/
+                ├── README.md
+                ├── cluener_predict.json
+                ├── dev.json
+                ├── test.json
+                └── train.json
+```
+
+**问题2**. 执行`bilstm_preprocess.py`程序时，可能会有import Error。
+
+可以按下述方式修改导入，也可以用其他方式，只要能保证正确导入即可。
+
+后续执行其他几个python程序时，也可能有类似的问题，以相同的方法解决即可。
+
+```python
+import os
+import sys
+import json
+import stat
+import argparse
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn as nn
+import tqdm
+import config
+
+# 获取当前脚本所在目录
+current_dir = Path(__file__).resolve().parent
+# 计算 CLUENER2020/bilstm_crf_pytorch 的绝对路径
+voca_dir = current_dir / "CLUENER2020" / "bilstm_crf_pytorch"
+# 添加至 Python 搜索路径
+sys.path.insert(0, str(voca_dir))
+from vocabulary import Vocabulary
+from common import seed_everything
+```
+
+#### c.模型转换
+
+执行 `2.ONNX 模型转 OM 模型`时，`chip_name`设置为`310B4`
+
+```bash
+chip_name=310B4
+```
+
+#### 推理验证
+
+文档中提到先安装`aclruntime`、`ais_bench`两个工具，可以先执行`find . -name "libascendcl.so"`，能找到so文件就不需要安装。
+
+之前遇到以下问题，可能是预置的`aclruntime`库与新安装的`aclruntime`库有冲突，无法正确导入。
+
+```bash
+sh-5.1# python -m ais_bench     --model ./inference/bilstm_bs${bs}.om     --input inference/prep_data/inputs/input_ids,inference/prep_data/inputs/input_mask     --output ./inference/     --output_dirname results_bs${bs}     --outfmt NPY
+Traceback (most recent call last):
+  File "/usr/lib64/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib64/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/usr/local/lib/python3.9/site-packages/ais_bench/__main__.py", line 3, in <module>
+    exec(open(os.path.join(cur_path, "infer/__main__.py")).read())
+  File "<string>", line 13, in <module>
+  File "/usr/local/lib/python3.9/site-packages/ais_bench/infer/interface.py", line 3, in <module>
+    import aclruntime
+ImportError: libascendcl.so: cannot open shared object file: No such file or directory
+```
+
+若出现相同的error，可参考[yunwuyue7/Ascend](https://github.com/yunwuyue7/Ascend#)仓库中的`LLM-help`文档，实测大语言模型提供的方案可以解决问题。
 
 ## Tips
 
