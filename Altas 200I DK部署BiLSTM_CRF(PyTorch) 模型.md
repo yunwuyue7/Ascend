@@ -1,4 +1,4 @@
-# Altas 200I DK
+# Altas 200I DK部署BiLSTM_CRF(PyTorch) 模型
 
 ## 基本信息
 
@@ -24,7 +24,7 @@
 
 ### 2. 启动、登录开发板
 
-#### 启动
+#### a.启动
 
 可参考[Windows系统制卡-Atlas 200I DK A2开发者套件-昇腾社区](https://www.hiascend.com/document/detail/zh/Atlas200IDKA2DeveloperKit/23.0.RC2/qs/qs_0005.html) “连接启动开发者套件 -- 本机显示模式”章节内容（左侧选择章节）。
 
@@ -41,7 +41,7 @@
 
 <img src=".\images\4.png" alt="1" style="zoom:67%;" />
 
-#### 登录
+#### b.登录
 
 1. 参考“登录开发者套件 - 远程登录模式（Windows系统）- 以太网口远程登录（SSH方式）”章节：
 
@@ -83,20 +83,20 @@
 
 #### b.准备数据集
 
-**问题1**. 文档中以下列命令下载数据集，但链接好像挂了（HTTP Error 403）
+1. 文档中以下列命令下载数据集，但链接好像挂了（HTTP Error 403）
 
-```bash
-cd CLUENER2020/bilstm_crf_pytorch/
-python download_clue_data.py --data_dir=./dataset --tasks=cluener 
-cd ../../
-```
+   ```bash
+   cd CLUENER2020/bilstm_crf_pytorch/
+   python download_clue_data.py --data_dir=./dataset --tasks=cluener 
+   cd ../../
+   ```
 
-可以从[yunwuyue7/Ascend](https://github.com/yunwuyue7/Ascend#)仓库中获取`archive.zip`压缩包，解压后得到所需的文件，放在`BiLSTM_CRF_PyTorch/CLUENER2020/bilstm_crf_pytorch/dataset/cluener`路径下。
+   可以从[yunwuyue7/Ascend](https://github.com/yunwuyue7/Ascend#)仓库中获取`archive.zip`压缩包，解压后得到所需的文件，放在`BiLSTM_CRF_PyTorch/CLUENER2020/bilstm_crf_pytorch/dataset/cluener`路径下。
 
-生成的数据目录结构与文档中一致：
+   生成的数据目录结构与文档中一致：
 
-```bash
-├── CLUENER2020/
+   ```bash
+   ├── CLUENER2020/
     ├── bilstm_crf_pytorch/
         ├── dataset/
             ├── cluener/
@@ -105,45 +105,47 @@ cd ../../
                 ├── dev.json
                 ├── test.json
                 └── train.json
-```
+   ```
 
-**问题2**. 执行`bilstm_preprocess.py`程序时，可能会有import Error。
+2.  执行`bilstm_preprocess.py`程序时，可能会有import Error。
 
-可以按下述方式修改导入，也可以用其他方式，只要能保证正确导入即可。
+   可以按下述方式修改导入，也可以用其他方式，只要能保证正确导入即可。
 
-后续执行其他几个python程序时，也可能有类似的问题，以相同的方法解决即可。
+   后续执行其他几个python程序时，也可能有类似的问题，以相同的方法解决即可。
 
-```python
-import os
-import sys
-import json
-import stat
-import argparse
-from pathlib import Path
-
-import numpy as np
-import torch
-import torch.nn as nn
-import tqdm
-import config
-
-# 获取当前脚本所在目录
-current_dir = Path(__file__).resolve().parent
-# 计算 CLUENER2020/bilstm_crf_pytorch 的绝对路径
-voca_dir = current_dir / "CLUENER2020" / "bilstm_crf_pytorch"
-# 添加至 Python 搜索路径
-sys.path.insert(0, str(voca_dir))
-from vocabulary import Vocabulary
-from common import seed_everything
-```
+     ```python
+     import os
+     import sys
+     import json
+     import stat
+     import argparse
+     from pathlib import Path
+     
+     import numpy as np
+     import torch
+     import torch.nn as nn
+     import tqdm
+     import config
+     
+     # 获取当前脚本所在目录
+     current_dir = Path(__file__).resolve().parent
+     # 计算 CLUENER2020/bilstm_crf_pytorch 的绝对路径
+     voca_dir = current_dir / "CLUENER2020" / "bilstm_crf_pytorch"
+     # 添加至 Python 搜索路径
+     sys.path.insert(0, str(voca_dir))
+     from vocabulary import Vocabulary
+     from common import seed_everything
+     ```
 
 #### c.模型转换
 
-执行 `2.ONNX 模型转 OM 模型`时，`chip_name`设置为`310B4`
+1. 执行gitee文档中`1.PyTroch 模型转 ONNX 模型`时，`run_lstm_crf.py`程序默认跑50个epoch，如果要先跑通流程，可改为跑两三个epoch（修改`run_lstm_crf.py` line209），可以大幅缩短耗时。
 
-```bash
-chip_name=310B4
-```
+2. 执行 gitee文档`2.ONNX 模型转 OM 模型`时，`chip_name`设置为`310B4`
+
+   ```bash
+   chip_name=310B4
+   ```
 
 #### 推理验证
 
@@ -166,7 +168,15 @@ Traceback (most recent call last):
 ImportError: libascendcl.so: cannot open shared object file: No such file or directory
 ```
 
-若出现相同的error，可参考[yunwuyue7/Ascend](https://github.com/yunwuyue7/Ascend#)仓库中的`LLM-help`文档，实测大语言模型提供的方案可以解决问题。
+若出现相同的error，可参考[yunwuyue7/Ascend](https://github.com/yunwuyue7/Ascend#)仓库中的`LLM-help`文档，实测此文档提供的方案可以解决问题。
+
+**精度验证**结果如下：
+
+<img src=".\images\5.png" alt="1" style="zoom:67%;" />
+
+**性能验证**结果如下：
+
+<img src=".\images\7.png" alt="1" style="zoom:67%;" />
 
 ## Tips
 
